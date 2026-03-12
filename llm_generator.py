@@ -104,7 +104,15 @@ def _generate_with_openai(query, results):
             temperature=0.1,
             max_tokens=150,
         )
-        return response.choices[0].message.content.strip()
+        raw = response.choices[0].message.content.strip()
+
+        # Strip "Answer:" prefix and "Sources:" suffix if LLM added them
+        if raw.startswith("Answer:"):
+            raw = raw.split("Answer:", 1)[1].strip()
+        if "Sources:" in raw:
+            raw = raw.split("Sources:")[0].strip()
+
+        return raw
 
     except Exception as e:
         logger.error("OpenAI generation failed: %s", e)
@@ -116,7 +124,6 @@ def _generate_clean_answer(query, results):
     Smart extraction when no LLM is available.
     Finds the 1-2 sentences that best answer the question.
     """
-    # Combine all chunk text
     all_text = " ".join(r["text"] for r in results)
 
     # Normalize: remove markdown headers, extra whitespace, bullet dashes
@@ -124,14 +131,14 @@ def _generate_clean_answer(query, results):
     clean = clean.replace("\n", " ")
     clean = " ".join(clean.split())
 
-    # Split into sentences (handle bullet points as separate sentences)
+    # Split into sentences
     raw_sentences = []
     for part in clean.replace("- ", ". ").split("."):
         s = part.strip()
         if len(s) > 20:
             raw_sentences.append(s)
 
-    # Score sentences by how many query words they contain
+    # Score sentences by query keyword overlap
     query_words = set(word.lower() for word in query.split() if len(word) > 2)
     scored = []
     for sentence in raw_sentences:
@@ -140,17 +147,14 @@ def _generate_clean_answer(query, results):
         if overlap > 0:
             scored.append((overlap, sentence))
 
-    # Take top 2 most relevant sentences
     scored.sort(key=lambda x: x[0], reverse=True)
     best = [s for _, s in scored[:2]]
-
-    source_names = _get_source_names(results)
 
     if best:
         answer_text = ". ".join(best)
         if not answer_text.endswith("."):
             answer_text += "."
-        return f"Answer: {answer_text}\n\nSources: {', '.join(source_names)}"
+        return answer_text                     # ← JUST the answer text, no prefix
     else:
         return "The answer is not found in the provided documents."
 

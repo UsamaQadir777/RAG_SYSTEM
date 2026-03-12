@@ -16,9 +16,8 @@ from collections import deque
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware          # ← ADD THIS
+from fastapi.middleware.cors import CORSMiddleware          
 
 from config import LOG_FILE, LOG_LEVEL
 from rag_pipeline import retrieve

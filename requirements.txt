@@ -4,4 +4,8 @@ sentence-transformers
 faiss-cpu
 pypdf
 langchain
+langchain-community
+langchain-text-splitters
+numpy
+jinja2
 openai
